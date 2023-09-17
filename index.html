@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div
+        style="margin:auto; display:flex; width:620px; max-width:calc(100% - 12px); flex-direction: column; background-color: rgb(17, 17, 17); padding: 10px 8px;">
+
+        <div style="display: flex; background-color: black; align-items: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="margin-left: 12px" fill="currentColor" class="bi bi-hdd-stack-fill" viewBox="0 0 16 16">
+                <path d="M2 9a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2H2zm.5 3a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm2 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zM2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2zm.5 3a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zm2 0a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1z"/>
+              </svg>
+            <input id="url-to-WS" value="ws://127.0.1:8765" style="width: 100%; padding: 12px; background-color: transparent; color: white; border: none; outline: none;"><button
+                onclick="connectInput()" style="background-color: transparent; color: white; outline: none; border: none; font-weight: bold; padding: 0 24px; cursor: pointer;">CONNECT</button>
+
+        </div>
+        <div style="display: flex; border-bottom: 2px solid black;" id="c-url">
+            <input id="url-to-get" value="http://google.com" style="width: 100%; padding: 6px; border: none; background-color: rgb(255, 255, 255); outline: none; "><button
+            style="border: none; background-color: greenyellow; padding: 0 6px; cursor:pointer"
+                onclick="send_get(document.getElementById('url-to-get').value)">GET</button>
+
+        </div>
+        <img id="targetImage" src="" alt="frame" style="width: 100%; height: auto;" draggable="false">
+
+
+        <div id="logs">
+            <b>
+                Wellcome to Selenium Remote GUI 
+            </b>
+        </div>
+    </div>
+
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            color: white;
+            background-color: rgb(40, 40, 40);
+            padding: 0;
+            margin: 0;
+            min-height: 100svh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+
+        }
+
+        #logs {
+            margin-top: 8px;
+            
+            color: white;
+            background-color: black;
+            padding: 8px;
+            font-size: 8px;
+            height: 100px;
+            overflow-y: scroll;
+            overflow-x: scroll;
+            max-width: 100%;
+        }
+
+
+        /* width */
+        ::-webkit-scrollbar {
+            width: 0px;
+            height: 0px;
+        }
+
+        /* Track */
+        ::-webkit-scrollbar-track {
+            background: #eaeaea;
+        }
+
+        /* Handle */
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+        }
+
+        /* Handle on hover */
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cacaca;
+        }
+
+        .green {
+            color: greenyellow
+        }
+    </style>
+
+    <script>
+        var ws = null;
+
+        const url_element_input = document.querySelector("#url-to-get")
+        const logs_element = document.getElementById("logs")
+
+        let url_element_input_focused = false; // Variável para rastrear o estado de foco do input
+
+        url_element_input.addEventListener("focus", () => {
+            url_element_input_focused = true;
+        });
+
+        url_element_input.addEventListener("blur", () => {
+            url_element_input_focused = false;
+        });
+
+
+
+        function log(str) {
+            let html = logs_element.innerHTML
+           
+            logs_element.innerHTML = html + "<br>" + str +"</br>"
+       
+            logs_element.scrollTop = logs_element.clientHeight
+        }
+
+        function send_get(url) {
+            if (ws != null) {
+                let command = "get_url:" + url
+                ws.send(command);
+            }
+        }
+
+
+        function connect(url) {
+            ws = new WebSocket(url);
+            ws.onopen = () => {
+                log("<b class='green'>Connected to the Server.</b>")
+                document.querySelector("#targetImage").style.display = "block"
+                document.querySelector("#c-url").style.display = "flex"
+
+            };
+
+            ws.onerror = (error) => {
+                log(`Erro: ${error}`);
+                ws = null
+            };
+
+            ws.onclose = (error) => {
+                log("<b style='color:red'>Connection is Closed !!</b>")
+                document.querySelector("#targetImage").src = ""
+                document.querySelector("#targetImage").style.display = "none"
+                document.querySelector("#c-url").style.display = "none"
+
+
+            }
+
+            ws.onmessage = (event) => {
+                if (event.data.startsWith("data:image/png;base64,")) {
+                    let img = event.data
+                    document.querySelector("#targetImage").src = img
+                } else {
+                    console.log(event.data)
+                    if (event.data.startsWith("loading_url:")) {
+                        log("Get URL: " + event.data.substring(("loading_url:").length))
+                    } else if (event.data.startsWith("finish_url:")) {
+                        log("Loaded page for: <b class='green'>" + event.data.substring(("finish_url:").length) + "</b>")
+                    }//current_url:
+                    else if (event.data.startsWith("current_url:")) {
+                        let currentUrl = url_element_input.value
+                        let url = event.data.substring(("current_url:").length)
+                        if (url_element_input_focused==false && currentUrl != url) {
+                            currentUrl = url
+                            url_element_input.value = currentUrl
+                        }
+
+                    }
+                }
+            }
+
+
+            const targetImage = document.getElementById("targetImage");
+            targetImage.addEventListener("click", (event) => {
+                const imageRect = targetImage.getBoundingClientRect();
+
+                // Calcula as coordenadas relativas dentro da imagem
+                const xRelative = (event.clientX - imageRect.left) / targetImage.width;
+                const yRelative = (event.clientY - imageRect.top) / targetImage.height;
+
+                // Garante que as coordenadas estejam dentro do intervalo de 0 a 1
+                const xFactor = Math.min(Math.max(xRelative, 0), 1);
+                const yFactor = Math.min(Math.max(yRelative, 0), 1);
+
+                const message = `click_${xFactor}_${yFactor}`;
+                console.log(message);
+                ws.send(message);
+
+
+            })
+
+        }
+
+
+        function connectInput() {
+            let url = document.getElementById("url-to-WS").value
+            if ( ws){
+                ws.close()
+            }
+            connect(url)
+        }
+
+
+
+        window.addEventListener("DOMContentLoaded",function () {
+            document.querySelector("#targetImage").style.display = "none"
+            document.querySelector("#c-url").style.display = "none"
+
+            document.getElementsByTagName('body')[0].onkeyup = function (e) {
+                var ev = e || event;
+                if (ev.keyCode == 70) {//&& ev.ctrlKey) {
+                    alert("cool")
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
