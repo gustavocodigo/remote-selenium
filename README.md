@@ -2,6 +2,10 @@
 
 working in progress
 
+# Obs
+work with headless.
+
+no graphics enviroment needed.
 
 # Screenshots
 
@@ -15,3 +19,14 @@ Accessing the same browser from another network using a smartphone
 
 
 As it running on a server you can control it from anywhere !
+
+
+# Description
+
+The python files contain the server
+(where the script with selenium should run)
+
+The index.html
+is a gui html to access the interface and connect with websocket..
+
+you can use this html on any browser
